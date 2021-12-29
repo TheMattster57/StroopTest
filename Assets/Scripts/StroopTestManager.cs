@@ -9,15 +9,26 @@ public class StroopTestManager : MonoBehaviour
     // The colours you wish to use in the Stroop Test
     public Colour[] colours;
 
+    // Current time in the run
+    float currentTime;
+
+    // Counter of how many questions completed & how many to finish
+    public int requiredToFinish;
+    int currentQuestionNumber;
+
     // Audio
     public AudioSource audioSource;
     public AudioClip correctClip;
     public AudioClip wrongClip;
 
     // UI
+    public GameObject questionCanvas;
+    public GameObject endGameCanvas;
     public Sprite correctAnswer;
     public Sprite wrongAnswer;
     public Image AnswerImage;
+    public TextMeshProUGUI currentTimeUI;
+    public TextMeshProUGUI endTimeUI;
     public TextMeshProUGUI question;
     public TextMeshProUGUI[] answers;
 
@@ -28,6 +39,7 @@ public class StroopTestManager : MonoBehaviour
 
     // These are temporay values to determine what answers are avaliable to choose
     List<Colour> currentAnswerColours = new List<Colour>();
+    List<Colour> avaliableColours = new List<Colour>();
     bool answerAvaliable = false;
     bool textAnswerAvaliable = false;
 
@@ -40,7 +52,11 @@ public class StroopTestManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (currentQuestionNumber < requiredToFinish)
+        {
+            currentTime += Time.deltaTime;
+            currentTimeUI.text = Mathf.Round(currentTime).ToString();
+        }
     }
 
     public void NewQuestion()
@@ -48,13 +64,13 @@ public class StroopTestManager : MonoBehaviour
         if(colours.Length > 1)
         {
             // Choosing a random colour for the question
-            currentColour = colours[Random.Range(0, colours.Length)];
+            currentColour = colours[Random.Range(1, colours.Length) - 1];
 
             // Choosing and checking if a random name doesn't match the question colour
-            Colour tempColour = colours[Random.Range(0, colours.Length)];
+            Colour tempColour = colours[Random.Range(1, colours.Length) - 1];
             while (CheckColour(currentColour, tempColour))
             {
-                tempColour = colours[Random.Range(0, colours.Length)];
+                tempColour = colours[Random.Range(1, colours.Length) - 1];
             }
             currentColourName = tempColour;
 
@@ -68,10 +84,10 @@ public class StroopTestManager : MonoBehaviour
                 currentAnswerColours.Clear();
                 answerAvaliable = false;
                 textAnswerAvaliable = false;
-                for (int c = 0; c < colours.Length; c++)
-                {
-                    colours[c].alreadyAvaliable = false;
-                }
+            }
+            for (int c = 0; c < colours.Length; c++)
+            {
+                colours[c].alreadyUsed = false;
             }
 
             int correctAnswerInt = 0;
@@ -79,13 +95,26 @@ public class StroopTestManager : MonoBehaviour
             // Setting the answers
             for (int i = 0; i < answers.Length; i++)
             {
-                int newColourInt = Random.Range(0, colours.Length);
-                while(colours[newColourInt].alreadyAvaliable)
+                avaliableColours.Clear();
+                for (int c = 0; c < colours.Length; c++)
                 {
-                    newColourInt = Random.Range(0, colours.Length);
+                    if (!colours[c].alreadyUsed)
+                        avaliableColours.Add(colours[c]);
                 }
-                currentAnswerColours.Add(colours[newColourInt]);
-                colours[newColourInt].alreadyAvaliable = true;
+                if(avaliableColours.Count > 0)
+                    currentAnswerColours.Add(avaliableColours[Random.Range(1, avaliableColours.Count) - 1]);
+                for (int n = 0; n < colours.Length; n++)
+                {
+                    if (currentAnswerColours.Count > 0)
+                    {
+                        if (colours[n] == currentAnswerColours[currentAnswerColours.Count - 1])
+                        {
+                            colours[n].alreadyUsed = true;
+                            break;
+                        }
+                    }
+                }
+                
 
                 if (CheckColour(currentColour, currentAnswerColours[i]))
                 {
@@ -103,22 +132,22 @@ public class StroopTestManager : MonoBehaviour
             // Check if the correct answer & text answer are avaliable options and if not then set them
             if (!answerAvaliable)
             {
-                correctAnswerInt = Random.Range(0, currentAnswerColours.Count);
+                correctAnswerInt = Random.Range(1, currentAnswerColours.Count) - 1;
                 if(textAnswerAvaliable)
                 {
                     while (correctTextAnswerInt == correctAnswerInt)
                     {
-                        correctAnswerInt = Random.Range(0, currentAnswerColours.Count);
+                        correctAnswerInt = Random.Range(1, currentAnswerColours.Count) - 1;
                     }
                 }
                 currentAnswerColours[correctAnswerInt] = currentColour;
             }
             if (!textAnswerAvaliable)
             {
-                correctTextAnswerInt = Random.Range(0, currentAnswerColours.Count);
+                correctTextAnswerInt = Random.Range(1, currentAnswerColours.Count) - 1;
                 while(correctTextAnswerInt == correctAnswerInt)
                 {
-                    correctTextAnswerInt = Random.Range(0, currentAnswerColours.Count);
+                    correctTextAnswerInt = Random.Range(1, currentAnswerColours.Count) - 1;
                 }
                 currentAnswerColours[correctTextAnswerInt] = currentColourName;
             }
@@ -133,14 +162,37 @@ public class StroopTestManager : MonoBehaviour
 
     public void CheckAnswer(int answerNumber)
     {
-        if(CheckColour(currentAnswerColours[answerNumber], currentColour))
+        if(CheckColour(currentAnswerColours[answerNumber - 1], currentColour))
         {
             StartCoroutine(Answer(true));
-            NewQuestion();
+            if(currentQuestionNumber < requiredToFinish)
+                NewQuestion();
+            else
+            {
+                ChangeCanvas(true);
+            }
         }
         else
         {
             StartCoroutine(Answer(false));
+        }
+    }
+
+    public void ChangeCanvas(bool endGame)
+    {
+        if(endGame)
+        {
+            questionCanvas.SetActive(false);
+            endGameCanvas.SetActive(true);
+            endTimeUI.text = Mathf.Round(currentTime).ToString();
+        }
+        else
+        {
+            questionCanvas.SetActive(true);
+            endGameCanvas.SetActive(false);
+            currentQuestionNumber = 0;
+            currentTime = 0;
+            NewQuestion();
         }
     }
 
@@ -151,14 +203,17 @@ public class StroopTestManager : MonoBehaviour
             AnswerImage.gameObject.SetActive(true);
             AnswerImage.sprite = correctAnswer;
             audioSource.clip = correctClip;
+            audioSource.Play();
             yield return new WaitForSeconds(0.5f);
             AnswerImage.gameObject.SetActive(false);
+            currentQuestionNumber++;
         }
         else
         {
             AnswerImage.gameObject.SetActive(true);
             AnswerImage.sprite = wrongAnswer;
             audioSource.clip = wrongClip;
+            audioSource.Play();
             yield return new WaitForSeconds(0.5f);
             AnswerImage.gameObject.SetActive(false);
         }    

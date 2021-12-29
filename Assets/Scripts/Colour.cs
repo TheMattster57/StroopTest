@@ -7,5 +7,5 @@ public class Colour : ScriptableObject
 {
     public Color color;
     public string colorName;
-    [HideInInspector] public bool alreadyAvaliable = false;
+    [HideInInspector] public bool alreadyUsed = false;
 }
