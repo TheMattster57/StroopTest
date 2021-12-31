@@ -92,6 +92,7 @@ public class StroopTestManager : MonoBehaviour
 
             int correctAnswerInt = 0;
             int correctTextAnswerInt = 0;
+
             // Setting the answers
             for (int i = 0; i < answers.Length; i++)
             {
@@ -115,7 +116,7 @@ public class StroopTestManager : MonoBehaviour
                     }
                 }
                 
-
+                // Checking if the new colour matches either the visual colour or the text of the questions and remembering it's position in the array
                 if (CheckColour(currentColour, currentAnswerColours[i]))
                 {
                     answerAvaliable = true;
@@ -160,11 +161,13 @@ public class StroopTestManager : MonoBehaviour
         }
     }
 
+    // answerNumber is which UI it is refering to
     public void CheckAnswer(int answerNumber)
     {
         if(CheckColour(currentAnswerColours[answerNumber - 1], currentColour))
         {
             StartCoroutine(Answer(true));
+            // check if this is the last question
             if(currentQuestionNumber < requiredToFinish)
                 NewQuestion();
             else
@@ -178,6 +181,7 @@ public class StroopTestManager : MonoBehaviour
         }
     }
 
+    // change to the end game canvas or back to the strrop test to try again
     public void ChangeCanvas(bool endGame)
     {
         if(endGame)
@@ -196,6 +200,7 @@ public class StroopTestManager : MonoBehaviour
         }
     }
 
+    // Give a response to the player about whether they got the correct or wrong answer
     IEnumerator Answer(bool correct)
     {
         if(correct)
